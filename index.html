@@ -437,6 +437,7 @@
 
     <!-- CONTAINER DE NOTIFICAÇÕES TOAST -->
     <div id="toastContainer" class="fixed bottom-6 right-6 z-50 space-y-3 pointer-events-none"></div>
+    <audio id="cashSound" src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_12d46e36d8.mp3" preload="auto" class="hidden"></audio>
 
     <!-- SCRIPT DE LÓGICA DO SUPABASE & CRM -->
     <script>
@@ -454,9 +455,6 @@
         let termoBusca = '';
         let ordenacaoAtual = 'recente';
         let somHabilitado = true;
-        let contextoAudio = null;
-        let bufferSomNovoLead = null;
-        let inicializacaoAudio = null;
         let canalRealtime = null;
         let crmAtivo = false;
 
@@ -493,7 +491,6 @@
             }
 
             document.getElementById('loginForm').reset();
-            inicializarAudio();
             await ativarCRM();
         }
 
@@ -529,72 +526,14 @@
             terminarSessaoNaInterface();
         }
 
-        async function inicializarAudio() {
-            if (contextoAudio && bufferSomNovoLead) return true;
-            if (inicializacaoAudio) return inicializacaoAudio;
-
-            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-            if (!AudioContextClass) return false;
-
-            inicializacaoAudio = (async () => {
-                try {
-                    contextoAudio = new AudioContextClass();
-                    const sampleRate = contextoAudio.sampleRate || 44100;
-                    const duracaoTotal = 0.72;
-                    const buffer = contextoAudio.createBuffer(1, Math.ceil(sampleRate * duracaoTotal), sampleRate);
-                    const samples = buffer.getChannelData(0);
-                    const notas = [
-                        { frequencia: 1046.5, inicio: 0, duracao: 0.16 },
-                        { frequencia: 1318.5, inicio: 0.1, duracao: 0.17 },
-                        { frequencia: 1568, inicio: 0.21, duracao: 0.19 },
-                        { frequencia: 2093, inicio: 0.34, duracao: 0.32 }
-                    ];
-
-                    for (let indice = 0; indice < samples.length; indice++) {
-                        const tempo = indice / sampleRate;
-                        let amostra = 0;
-                        notas.forEach(nota => {
-                            const tempoNota = tempo - nota.inicio;
-                            if (tempoNota < 0 || tempoNota > nota.duracao) return;
-                            const envelope = Math.min(1, tempoNota / 0.008, (nota.duracao - tempoNota) / 0.09);
-                            amostra += Math.sin(2 * Math.PI * nota.frequencia * tempoNota) * envelope * 0.16;
-                        });
-                        samples[indice] = amostra;
-                    }
-
-                    bufferSomNovoLead = buffer;
-                    if (contextoAudio.state === 'suspended') await contextoAudio.resume();
-                    return true;
-                } catch (error) {
-                    console.warn('Áudio de notificação indisponível neste navegador.', error);
-                    return false;
-                }
-            })();
-
-            return inicializacaoAudio;
-        }
-
-        async function playSound() {
-            if (!somHabilitado) return false;
-
-            try {
-                await inicializarAudio();
-                if (!contextoAudio || !bufferSomNovoLead) return false;
-                if (contextoAudio.state === 'suspended') await contextoAudio.resume();
-                if (contextoAudio.state !== 'running') return false;
-
-                const fonte = contextoAudio.createBufferSource();
-                fonte.buffer = bufferSomNovoLead;
-                fonte.connect(contextoAudio.destination);
-                fonte.start();
-                return true;
-            } catch (error) {
-                console.warn('Não foi possível reproduzir o alerta sonoro.', error);
-                return false;
+        function playCashSound() {
+            if (!somHabilitado) return;
+            const sound = document.getElementById('cashSound');
+            if (sound) {
+                sound.currentTime = 0;
+                sound.play().catch(err => console.log('Áudio bloqueado pelo browser:', err));
             }
         }
-
-        window.addEventListener('click', () => inicializarAudio(), { once: true });
 
         function toggleSound() {
             somHabilitado = !somHabilitado;
@@ -1137,7 +1076,6 @@ const pipeline = leadsGlobais
 
         async function salvarNovoLead(e) {
             e.preventDefault();
-            const audioPreparado = inicializarAudio();
             const valor = document.getElementById('novoValor').value;
             const novoLead = {
                 nome: document.getElementById('novoNome').value.trim(),
@@ -1160,11 +1098,16 @@ const pipeline = leadsGlobais
                 return;
             }
 
-            await audioPreparado;
-            playSound();
             leadsGlobais.unshift(data);
             atualizarInterfaceCompleta();
             fecharModalNovoLead();
+            if (somHabilitado) {
+                const sound = document.getElementById('cashSound');
+                if (sound) {
+                    sound.currentTime = 0;
+                    sound.play().catch(err => console.log('Áudio bloqueado pelo browser:', err));
+                }
+            }
             mostrarToast('Lead criado com sucesso!', 'sucesso');
         }
 
@@ -1273,7 +1216,7 @@ const pipeline = leadsGlobais
                     leadsGlobais.unshift(novo);
                     atualizarInterfaceCompleta();
                     
-                    playSound();
+                    playCashSound();
 
                     mostrarToast(`🔔 Novo lead recebido: ${novo.nome || 'Cliente'} (${novo.veiculo || 'Veículo'})`, 'info');
                 })
