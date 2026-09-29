@@ -159,6 +159,11 @@
 
             <!-- ABA 2: LEADS & ORÇAMENTOS (TABELA COMPLETA) -->
             <div id="tab-leads" class="hidden space-y-6">
+                <div class="flex justify-end">
+                    <button onclick="abrirModalNovoLead()" class="bg-brandAmber hover:bg-brandAmberHover text-black px-5 py-2.5 rounded-xl text-sm font-bold transition flex items-center shadow-lg shadow-amber-500/10">
+                        <i class="fa-solid fa-plus mr-2"></i> Novo Lead
+                    </button>
+                </div>
                 <!-- Filtros rápidos -->
                 <div class="flex flex-wrap items-center justify-between gap-4 glass-panel p-4 rounded-2xl">
                     <div class="flex flex-wrap items-center gap-2" id="filtroStatusContainer">
@@ -252,6 +257,59 @@
             <div class="flex justify-between items-center mb-6 pb-4 border-b border-cardBorder">
                 <div>
                     <h3 id="modalTitulo" class="text-xl font-bold">Detalhes do Lead</h3>
+                <!-- MODAL DE NOVO LEAD -->
+                <div id="modalNovoLead" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+                    <div class="glass-panel w-full max-w-2xl rounded-3xl p-8 border border-cardBorder max-h-[90vh] overflow-y-auto custom-scrollbar shadow-2xl">
+                        <div class="flex justify-between items-center mb-6 pb-4 border-b border-cardBorder">
+                            <div>
+                                <h3 class="text-xl font-bold">Novo Lead</h3>
+                                <p class="text-zinc-400 text-xs">Preencha os dados do novo cliente.</p>
+                            </div>
+                            <button type="button" onclick="fecharModalNovoLead()" class="text-zinc-400 hover:text-white text-lg" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                        <form id="formNovoLead" onsubmit="salvarNovoLead(event)" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="novoNome" class="block text-xs font-semibold text-zinc-400 mb-1">Nome do Cliente</label>
+                                    <input type="text" id="novoNome" class="w-full bg-zinc-900 border border-cardBorder rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-brandAmber" required>
+                                </div>
+                                <div>
+                                    <label for="novoVeiculo" class="block text-xs font-semibold text-zinc-400 mb-1">Veículo</label>
+                                    <input type="text" id="novoVeiculo" class="w-full bg-zinc-900 border border-cardBorder rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-brandAmber">
+                                </div>
+                                <div>
+                                    <label for="novoServico" class="block text-xs font-semibold text-zinc-400 mb-1">Serviço</label>
+                                    <input type="text" id="novoServico" class="w-full bg-zinc-900 border border-cardBorder rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-brandAmber">
+                                </div>
+                                <div>
+                                    <label for="novoTelefone" class="block text-xs font-semibold text-zinc-400 mb-1">Telefone / WhatsApp</label>
+                                    <input type="tel" id="novoTelefone" class="w-full bg-zinc-900 border border-cardBorder rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-brandAmber">
+                                </div>
+                                <div>
+                                    <label for="novoValor" class="block text-xs font-semibold text-zinc-400 mb-1">Valor (R$)</label>
+                                    <input type="number" id="novoValor" min="0" step="0.01" class="w-full bg-zinc-900 border border-cardBorder rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-brandAmber">
+                                </div>
+                                <div>
+                                    <label for="novoStatus" class="block text-xs font-semibold text-zinc-400 mb-1">Status</label>
+                                    <select id="novoStatus" class="w-full bg-zinc-900 border border-cardBorder rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-brandAmber text-zinc-200">
+                                        <option value="NOVO">NOVO</option>
+                                        <option value="EM_ATENDIMENTO">EM_ATENDIMENTO</option>
+                                        <option value="ORCAMENTO">ORCAMENTO</option>
+                                        <option value="NEGOCIACAO">NEGOCIACAO</option>
+                                        <option value="AGENDADO">AGENDADO</option>
+                                        <option value="GANHO">GANHO</option>
+                                        <option value="PERDIDO">PERDIDO</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="flex justify-end space-x-3 pt-6 border-t border-cardBorder mt-6">
+                                <button type="button" onclick="fecharModalNovoLead()" class="px-5 py-2.5 rounded-xl bg-zinc-800 text-zinc-300 text-xs font-bold hover:bg-zinc-700 transition">Cancelar</button>
+                                <button type="submit" class="px-6 py-2.5 rounded-xl bg-brandAmber text-black text-xs font-bold hover:bg-brandAmberHover transition">Criar Lead</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
                     <p class="text-zinc-400 text-xs">Visualize ou atualize as informações do cliente.</p>
                 </div>
                 <button onclick="fecharModal()" class="text-zinc-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
@@ -510,6 +568,9 @@ const pipeline = leadsGlobais
                             </a>
                             <button onclick="abrirModal(${item.id})" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-zinc-800 text-zinc-300 hover:bg-brandAmber hover:text-black transition" title="Editar / Detalhes">
                                 <i class="fa-solid fa-pen text-xs"></i>
+                            </button>
+                            <button onclick="excluirLead(${item.id})" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-zinc-800 text-red-400 hover:bg-red-500 hover:text-white transition" title="Excluir lead" aria-label="Excluir lead">
+                                <i class="fa-solid fa-trash text-xs"></i>
                             </button>
                         </td>
                     </tr>
@@ -814,6 +875,46 @@ const pipeline = leadsGlobais
             renderizarTabelaLeads();
         }
 
+        // CRIAR LEAD
+        function abrirModalNovoLead() {
+            document.getElementById('formNovoLead').reset();
+            document.getElementById('modalNovoLead').classList.remove('hidden');
+        }
+
+        function fecharModalNovoLead() {
+            document.getElementById('modalNovoLead').classList.add('hidden');
+        }
+
+        async function salvarNovoLead(e) {
+            e.preventDefault();
+            const valor = document.getElementById('novoValor').value;
+            const novoLead = {
+                nome: document.getElementById('novoNome').value.trim(),
+                veiculo: document.getElementById('novoVeiculo').value.trim(),
+                servico: document.getElementById('novoServico').value.trim(),
+                telefone: document.getElementById('novoTelefone').value.trim(),
+                valor: valor ? Number(valor) : null,
+                status: document.getElementById('novoStatus').value
+            };
+
+            const { data, error } = await supabaseClient
+                .from('pistas')
+                .insert(novoLead)
+                .select()
+                .single();
+
+            if (error) {
+                console.error('Erro ao criar lead:', error);
+                mostrarToast('Erro ao criar lead.', 'erro');
+                return;
+            }
+
+            leadsGlobais.unshift(data);
+            atualizarInterfaceCompleta();
+            fecharModalNovoLead();
+            mostrarToast('Lead criado com sucesso!', 'sucesso');
+        }
+
         // MODAL DE EDIÇÃO
       function abrirModal(id) {
             const lead = leadsGlobais.find(l => l.id === id);
@@ -865,8 +966,7 @@ const pipeline = leadsGlobais
             }
         }
 
-        async function excluirLeadAtual() {
-            const id = document.getElementById('editId').value;
+        async function excluirLead(id) {
             if (!confirm('Tem certeza que deseja excluir permanentemente este lead?')) return;
 
             const { error } = await supabaseClient
@@ -877,10 +977,16 @@ const pipeline = leadsGlobais
             if (error) {
                 mostrarToast('Erro ao excluir lead.', 'erro');
             } else {
+                leadsGlobais = leadsGlobais.filter(lead => String(lead.id) !== String(id));
+                atualizarInterfaceCompleta();
                 mostrarToast('Lead excluído com sucesso.', 'sucesso');
                 fecharModal();
-                carregarLeads();
             }
+        }
+
+        async function excluirLeadAtual() {
+            const id = document.getElementById('editId').value;
+            await excluirLead(id);
         }
 
         // SISTEMA DE TOAST NOTIFICATIONS
