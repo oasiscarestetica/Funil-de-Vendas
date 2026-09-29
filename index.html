@@ -446,6 +446,7 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         const ADMIN_LOGIN = 'admin';
         const ADMIN_PASSWORD = '11121996';
+        const CHAVE_SESSAO_CRM = 'oasiscare_crm_autenticado';
         const MEU_WHATSAPP = '5516991408438';
 
         let leadsGlobais = [];
@@ -483,14 +484,35 @@
                 return;
             }
 
+            try {
+                window.localStorage.setItem(CHAVE_SESSAO_CRM, '1');
+            } catch (error) {
+                console.warn('Não foi possível persistir a sessão neste navegador.', error);
+            }
+
             document.getElementById('loginForm').reset();
             prepararAudioSucesso();
             await ativarCRM();
         }
 
+        function restaurarSessaoPersistida() {
+            try {
+                if (window.localStorage.getItem(CHAVE_SESSAO_CRM) === '1') {
+                    ativarCRM();
+                }
+            } catch (error) {
+                console.warn('Não foi possível ler a sessão guardada neste navegador.', error);
+            }
+        }
+
         function terminarSessaoNaInterface() {
             crmAtivo = false;
             leadsGlobais = [];
+            try {
+                window.localStorage.removeItem(CHAVE_SESSAO_CRM);
+            } catch (error) {
+                console.warn('Não foi possível limpar a sessão guardada neste navegador.', error);
+            }
             document.getElementById('loginScreen').classList.remove('hidden');
             document.getElementById('loginForm').reset();
             atualizarInterfaceCompleta();
@@ -1230,6 +1252,7 @@ const pipeline = leadsGlobais
                 .subscribe();
         }
 
+            window.addEventListener('DOMContentLoaded', restaurarSessaoPersistida);
     </script>
 </body>
 </html>
