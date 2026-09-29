@@ -530,7 +530,8 @@ const pipeline = leadsGlobais
 
             ultimos.forEach(item => {
                 const fone = item.telefone || item.whatsapp || '';
-                const linkZap = `https://wa.me/${fone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${item.nome}, tudo bem? Aqui é da Oásis Car.`)}`;
+                const numeroZap = fone.replace(/\D/g, '');
+                const linkZap = `https://wa.me/${numeroZap}?text=${encodeURIComponent(`Olá ${item.nome}, tudo bem? Aqui é da Oásis Car.`)}`;
                 container.innerHTML += `
                     <div class="flex items-center justify-between p-3.5 rounded-xl bg-zinc-900/60 border border-cardBorder hover:border-zinc-700 transition">
                         <div>
