@@ -13,19 +13,20 @@
             theme: {
                 extend: {
                     colors: {
-                        darkBg: '#050505',
-                        cardDark: '#121214',
-                        cardBorder: '#222226',
-                        brandAmber: '#f59e0b',
-                        brandAmberHover: '#d97706',
+                        darkBg: '#030303',
+                        cardDark: '#0b0b0c',
+                        cardBorder: '#202022',
+                        brandAmber: '#d6ad62',
+                        brandAmberHover: '#bb914b',
                     }
                 }
             }
         }
     </script>
     <style>
-        body { background-color: #050505; color: #f4f4f5; font-family: 'Inter', sans-serif; }
-        .glass-panel { background: rgba(18, 18, 20, 0.75); backdrop-filter: blur(12px); border: 1px solid #222226; }
+        body { background: #030303; color: #f4f4f5; font-family: 'Inter', sans-serif; color-scheme: dark; }
+        ::selection { background: rgba(214, 173, 98, 0.28); color: #fff; }
+        .glass-panel { background: rgba(10, 10, 11, 0.92); backdrop-filter: blur(12px); border: 1px solid #202022; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #09090b; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #27272a; border-radius: 3px; }
@@ -35,6 +36,31 @@
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
+
+    <!-- LOGIN SUPABASE AUTH -->
+    <section id="loginScreen" class="fixed inset-0 z-[100] flex items-center justify-center bg-[#030303] p-5">
+        <div class="w-full max-w-sm border border-[#202022] bg-[#09090a] p-8 shadow-2xl shadow-black">
+            <div class="mb-8">
+                <span class="block text-brandAmber text-xs font-bold uppercase tracking-[0.25em]">Oásis Car</span>
+                <h1 class="mt-3 text-2xl font-bold text-white">Acesso ao CRM</h1>
+                <p class="mt-2 text-sm text-zinc-500">Entre com a sua conta autorizada.</p>
+            </div>
+            <form id="loginForm" onsubmit="entrarNoSistema(event)" class="space-y-5">
+                <div>
+                    <label for="loginUsername" class="mb-1.5 block text-xs font-semibold text-zinc-400">Utilizador</label>
+                    <input id="loginUsername" name="username" type="text" autocomplete="username" required class="w-full border border-[#29292b] bg-[#030303] px-4 py-3 text-sm text-white outline-none transition focus:border-brandAmber" placeholder="admin">
+                </div>
+                <div>
+                    <label for="loginPassword" class="mb-1.5 block text-xs font-semibold text-zinc-400">Palavra-passe</label>
+                    <input id="loginPassword" name="password" type="password" autocomplete="current-password" required class="w-full border border-[#29292b] bg-[#030303] px-4 py-3 text-sm text-white outline-none transition focus:border-brandAmber">
+                </div>
+                <p id="loginErro" class="hidden text-xs text-red-400" role="alert"></p>
+                <button id="loginSubmit" type="submit" class="w-full bg-brandAmber px-4 py-3 text-sm font-bold text-black transition hover:bg-brandAmberHover">
+                    <i class="fa-solid fa-arrow-right-to-bracket mr-2"></i> Entrar
+                </button>
+            </form>
+        </div>
+    </section>
 
     <!-- SIDEBAR PREMIUM -->
     <aside id="sidebar" class="w-64 bg-darkBg border-r border-cardBorder flex flex-col transition-all duration-300 z-30">
@@ -98,6 +124,9 @@
                 
                 <button onclick="carregarLeads()" class="bg-brandAmber hover:bg-brandAmberHover text-black px-5 py-2 rounded-xl text-sm font-bold transition flex items-center shadow-lg shadow-amber-500/10">
                     <i class="fa-solid fa-sync mr-2" id="syncIcon"></i> Atualizar Dados
+                </button>
+                <button onclick="sairDoSistema()" class="border border-cardBorder px-3 py-2 rounded-xl text-zinc-400 hover:text-white hover:border-zinc-500 transition" title="Terminar sessão" aria-label="Terminar sessão">
+                    <i class="fa-solid fa-right-from-bracket"></i>
                 </button>
             </div>
         </header>
@@ -171,8 +200,10 @@
                         <button onclick="filtrarPorStatus('NOVO', event)" class="px-4 py-2 rounded-xl text-xs font-bold transition bg-zinc-900 text-zinc-400 hover:text-white filter-btn" data-status="NOVO">Novos</button>
                         <button onclick="filtrarPorStatus('EM_ATENDIMENTO', event)" class="px-4 py-2 rounded-xl text-xs font-bold transition bg-zinc-900 text-zinc-400 hover:text-white filter-btn" data-status="EM_ATENDIMENTO">Em Atendimento</button>
                         <button onclick="filtrarPorStatus('ORCAMENTO', event)" class="px-4 py-2 rounded-xl text-xs font-bold transition bg-zinc-900 text-zinc-400 hover:text-white filter-btn" data-status="ORCAMENTO">Orçamento</button>
+                        <button onclick="filtrarPorStatus('NEGOCIACAO', event)" class="px-4 py-2 rounded-xl text-xs font-bold transition bg-zinc-900 text-zinc-400 hover:text-white filter-btn" data-status="NEGOCIACAO">Negociação</button>
                         <button onclick="filtrarPorStatus('AGENDADO', event)" class="px-4 py-2 rounded-xl text-xs font-bold transition bg-zinc-900 text-zinc-400 hover:text-white filter-btn" data-status="AGENDADO">Agendados</button>
                         <button onclick="filtrarPorStatus('GANHO', event)" class="px-4 py-2 rounded-xl text-xs font-bold transition bg-zinc-900 text-zinc-400 hover:text-white filter-btn" data-status="GANHO">Ganhos</button>
+                        <button onclick="filtrarPorStatus('PERDIDO', event)" class="px-4 py-2 rounded-xl text-xs font-bold transition bg-zinc-900 text-zinc-400 hover:text-white filter-btn" data-status="PERDIDO">Perdidos</button>
                     </div>
                     <div class="flex items-center space-x-3">
                         <select id="selectOrdenacao" onchange="mudarOrdenacao()" class="bg-zinc-900 border border-cardBorder text-xs rounded-xl px-3 py-2 text-zinc-300 focus:outline-none focus:border-brandAmber">
@@ -218,8 +249,11 @@
             <!-- ABA 4: AGENDA -->
             <div id="tab-agenda" class="hidden space-y-6">
                 <div class="glass-panel p-6 rounded-2xl">
-                    <h2 class="text-lg font-bold mb-2 flex items-center"><i class="fa-solid fa-calendar-check text-brandAmber mr-2"></i> Agendamentos Confirmados</h2>
-                    <p class="text-zinc-400 text-xs mb-6">Serviços agendados para execução na Oásis Car.</p>
+                    <div class="flex flex-wrap items-center justify-between gap-4 mb-2">
+                        <h2 class="text-lg font-bold flex items-center"><i class="fa-solid fa-calendar-check text-brandAmber mr-2"></i> Agendamentos Confirmados</h2>
+                        <button onclick="abrirModalAgendamento()" class="bg-brandAmber hover:bg-brandAmberHover text-black px-4 py-2 rounded-xl text-xs font-bold transition"><i class="fa-solid fa-calendar-plus mr-2"></i>Programar Cliente Ganho</button>
+                    </div>
+                    <p class="text-zinc-400 text-xs mb-6">Serviços agendados e clientes convertidos com data marcada.</p>
                     <div id="listaAgenda" class="space-y-3">
                         <!-- Preenchido via JS -->
                     </div>
@@ -257,6 +291,33 @@
             <div class="flex justify-between items-center mb-6 pb-4 border-b border-cardBorder">
                 <div>
                     <h3 id="modalTitulo" class="text-xl font-bold">Detalhes do Lead</h3>
+                <!-- MODAL DE AGENDAMENTO DE CLIENTE CONVERTIDO -->
+                <div id="modalAgendamento" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+                    <div class="glass-panel w-full max-w-lg rounded-3xl p-8 border border-cardBorder shadow-2xl">
+                        <div class="flex justify-between items-center mb-6 pb-4 border-b border-cardBorder">
+                            <div>
+                                <h3 class="text-xl font-bold">Programar Cliente</h3>
+                                <p class="text-zinc-400 text-xs">O status GANHO será mantido.</p>
+                            </div>
+                            <button type="button" onclick="fecharModalAgendamento()" class="text-zinc-400 hover:text-white text-lg" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                        <form onsubmit="salvarAgendamento(event)" class="space-y-4">
+                            <div>
+                                <label for="agendamentoLead" class="block text-xs font-semibold text-zinc-400 mb-1">Cliente convertido</label>
+                                <select id="agendamentoLead" required class="w-full bg-zinc-900 border border-cardBorder rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-brandAmber text-zinc-200"></select>
+                            </div>
+                            <div>
+                                <label for="agendamentoDataHora" class="block text-xs font-semibold text-zinc-400 mb-1">Data e hora</label>
+                                <input type="datetime-local" id="agendamentoDataHora" required class="w-full bg-zinc-900 border border-cardBorder rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-brandAmber text-white">
+                            </div>
+                            <div class="flex justify-end space-x-3 pt-5 border-t border-cardBorder">
+                                <button type="button" onclick="fecharModalAgendamento()" class="px-5 py-2.5 rounded-xl bg-zinc-800 text-zinc-300 text-xs font-bold hover:bg-zinc-700 transition">Cancelar</button>
+                                <button type="submit" class="px-6 py-2.5 rounded-xl bg-brandAmber text-black text-xs font-bold hover:bg-brandAmberHover transition">Guardar Agendamento</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
                 <!-- MODAL DE NOVO LEAD -->
                 <div id="modalNovoLead" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
                     <div class="glass-panel w-full max-w-2xl rounded-3xl p-8 border border-cardBorder max-h-[90vh] overflow-y-auto custom-scrollbar shadow-2xl">
@@ -383,6 +444,8 @@
         const SUPABASE_URL = 'https://pyodkkcmuoqrsnnifdqf.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_9jxs8Rc9L6BDNTvpT8fQ_A_dQSjuSHd';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const ADMIN_LOGIN = 'admin';
+        const ADMIN_AUTH_EMAIL = 'admin@oasiscarestetica.com';
         const MEU_WHATSAPP = '5516991408438';
 
         let leadsGlobais = [];
@@ -390,6 +453,95 @@
         let termoBusca = '';
         let ordenacaoAtual = 'recente';
         let somHabilitado = true;
+        let canalRealtime = null;
+        let crmAtivo = false;
+
+        function mostrarErroLogin(mensagem) {
+            const erro = document.getElementById('loginErro');
+            erro.textContent = mensagem;
+            erro.classList.remove('hidden');
+        }
+
+        async function ativarCRM() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            if (crmAtivo) return;
+            crmAtivo = true;
+            await carregarLeads();
+            configurarRealtime();
+        }
+
+        async function entrarNoSistema(event) {
+            event.preventDefault();
+            const username = document.getElementById('loginUsername').value.trim().toLowerCase();
+            const password = document.getElementById('loginPassword').value;
+            const erro = document.getElementById('loginErro');
+            const botao = document.getElementById('loginSubmit');
+            erro.classList.add('hidden');
+
+            if (username !== ADMIN_LOGIN) {
+                mostrarErroLogin('Utilizador ou palavra-passe inválidos.');
+                return;
+            }
+
+            botao.disabled = true;
+            botao.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> A autenticar';
+            const { data, error } = await supabaseClient.auth.signInWithPassword({
+                email: ADMIN_AUTH_EMAIL,
+                password
+            });
+            botao.disabled = false;
+            botao.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket mr-2"></i> Entrar';
+
+            if (error || data.user?.email?.toLowerCase() !== ADMIN_AUTH_EMAIL) {
+                if (!error) await supabaseClient.auth.signOut();
+                mostrarErroLogin('Utilizador ou palavra-passe inválidos.');
+                return;
+            }
+
+            document.getElementById('loginForm').reset();
+            await ativarCRM();
+        }
+
+        function terminarSessaoNaInterface() {
+            crmAtivo = false;
+            leadsGlobais = [];
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('loginForm').reset();
+            atualizarInterfaceCompleta();
+            if (canalRealtime) {
+                const canal = canalRealtime;
+                canalRealtime = null;
+                setTimeout(() => supabaseClient.removeChannel(canal), 0);
+            }
+        }
+
+        async function sairDoSistema() {
+            const { error } = await supabaseClient.auth.signOut();
+            if (error) {
+                mostrarToast('Não foi possível terminar a sessão.', 'erro');
+                return;
+            }
+            terminarSessaoNaInterface();
+        }
+
+        async function inicializarAutenticacao() {
+            supabaseClient.auth.onAuthStateChange(event => {
+                if (event === 'SIGNED_OUT') terminarSessaoNaInterface();
+            });
+
+            const { data, error } = await supabaseClient.auth.getSession();
+            if (error) {
+                mostrarErroLogin('Não foi possível verificar a sessão. Tente entrar novamente.');
+                return;
+            }
+
+            const email = data.session?.user?.email?.toLowerCase();
+            if (email === ADMIN_AUTH_EMAIL) {
+                await ativarCRM();
+            } else if (data.session) {
+                await supabaseClient.auth.signOut();
+            }
+        }
 
         // ÁUDIO DE NOTIFICAÇÃO SUAVE
         const audioNotificacao = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
@@ -473,10 +625,10 @@
             const hoje = leadsGlobais.filter(l => l.created_at && l.created_at.startsWith(hojeStr)).length;
             
 const pipeline = leadsGlobais
-    .filter(l => l.status !== 'GANHO' && l.status !== 'PERDIDO')
+    .filter(l => !['GANHO', 'PERDIDO'].includes(String(l.status || '').toUpperCase()))
     .reduce((acc, l) => acc + (Number(l.valor) || 0), 0);
 
-            const ganhos = leadsGlobais.filter(l => l.status === 'GANHO').length;
+            const ganhos = leadsGlobais.filter(l => String(l.status || '').toUpperCase() === 'GANHO').length;
             const conversao = total > 0 ? ((ganhos / total) * 100).toFixed(1) : 0;
 
             document.getElementById('m-total').innerText = total;
@@ -487,7 +639,7 @@ const pipeline = leadsGlobais
             // Resumo de Status na Dashboard
             const statusCounts = {};
             leadsGlobais.forEach(l => {
-                const st = l.status || 'NOVO';
+                const st = String(l.status || 'NOVO').toUpperCase();
                 statusCounts[st] = (statusCounts[st] || 0) + 1;
             });
 
@@ -515,7 +667,7 @@ const pipeline = leadsGlobais
             corpo.innerHTML = '';
 
             let filtrados = leadsGlobais.filter(l => {
-                const matchStatus = filtroAtivo === 'TODOS' || l.status === filtroAtivo;
+                const matchStatus = filtroAtivo === 'TODOS' || String(l.status || '').toUpperCase() === filtroAtivo;
                 const termo = termoBusca.toLowerCase();
                 const matchBusca = !termo || 
                     (l.nome && l.nome.toLowerCase().includes(termo)) ||
@@ -720,7 +872,7 @@ const pipeline = leadsGlobais
             container.innerHTML = '';
 
             const agendados = leadsGlobais
-                .filter(l => l.status === 'AGENDADO')
+                .filter(l => String(l.status || '').toUpperCase() === 'AGENDADO' || (String(l.status || '').toUpperCase() === 'GANHO' && l.data_agendamento))
                 .sort((a, b) => {
                     const da = a.data_agendamento ? String(a.data_agendamento) : '9999-12-31T23:59';
                     const db = b.data_agendamento ? String(b.data_agendamento) : '9999-12-31T23:59';
@@ -791,7 +943,7 @@ const pipeline = leadsGlobais
         function renderizarClientesGanhos() {
             const container = document.getElementById('listaClientesGanhos');
             container.innerHTML = '';
-            const ganhos = leadsGlobais.filter(l => l.status === 'GANHO');
+            const ganhos = leadsGlobais.filter(l => String(l.status || '').toUpperCase() === 'GANHO');
 
             if (ganhos.length === 0) {
                 container.innerHTML = '<p class="text-xs text-zinc-500 text-center py-8">Nenhum cliente convertido ainda.</p>';
@@ -816,7 +968,7 @@ const pipeline = leadsGlobais
         function renderizarPerdidos() {
             const container = document.getElementById('listaPerdidos');
             container.innerHTML = '';
-            const perdidos = leadsGlobais.filter(l => l.status === 'PERDIDO');
+            const perdidos = leadsGlobais.filter(l => String(l.status || '').toUpperCase() === 'PERDIDO');
 
             if (perdidos.length === 0) {
                 container.innerHTML = '<p class="text-xs text-zinc-500 text-center py-8">Nenhum lead perdido.</p>';
@@ -873,6 +1025,54 @@ const pipeline = leadsGlobais
         function mudarOrdenacao() {
             ordenacaoAtual = document.getElementById('selectOrdenacao').value;
             renderizarTabelaLeads();
+        }
+
+        // AGENDAR CLIENTE CONVERTIDO
+        function abrirModalAgendamento() {
+            const clientesGanhos = leadsGlobais.filter(lead => String(lead.status || '').toUpperCase() === 'GANHO');
+            if (clientesGanhos.length === 0) {
+                mostrarToast('Ainda não existem clientes convertidos para agendar.', 'erro');
+                return;
+            }
+
+            const select = document.getElementById('agendamentoLead');
+            select.innerHTML = '<option value="">Selecione um cliente...</option>';
+            clientesGanhos.forEach(lead => {
+                const option = document.createElement('option');
+                option.value = lead.id;
+                option.textContent = `${lead.nome || 'Cliente'} - ${lead.veiculo || 'Veículo'}`;
+                select.appendChild(option);
+            });
+            document.getElementById('agendamentoDataHora').value = '';
+            document.getElementById('modalAgendamento').classList.remove('hidden');
+        }
+
+        function fecharModalAgendamento() {
+            document.getElementById('modalAgendamento').classList.add('hidden');
+        }
+
+        async function salvarAgendamento(e) {
+            e.preventDefault();
+            const id = document.getElementById('agendamentoLead').value;
+            const dataAgendamento = document.getElementById('agendamentoDataHora').value;
+            if (!id || !dataAgendamento) return;
+
+            const { error } = await supabaseClient
+                .from('pistas')
+                .update({ data_agendamento: dataAgendamento })
+                .eq('id', id);
+
+            if (error) {
+                console.error('Erro ao guardar agendamento:', error);
+                mostrarToast('Erro ao guardar agendamento.', 'erro');
+                return;
+            }
+
+            const lead = leadsGlobais.find(item => String(item.id) === String(id));
+            if (lead) lead.data_agendamento = dataAgendamento;
+            atualizarInterfaceCompleta();
+            fecharModalAgendamento();
+            mostrarToast('Agendamento guardado com sucesso!', 'sucesso');
         }
 
         // CRIAR LEAD
@@ -1012,7 +1212,8 @@ const pipeline = leadsGlobais
 
         // SUPABASE REALTIME (NOVO LEAD EM TEMPO REAL)
         function configurarRealtime() {
-            supabaseClient
+            if (canalRealtime) return;
+            canalRealtime = supabaseClient
                 .channel('public:pistas')
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pistas' }, payload => {
                     const novo = payload.new;
@@ -1030,8 +1231,7 @@ const pipeline = leadsGlobais
 
         // INICIALIZAÇÃO AO CARREGAR A PÁGINA
         window.onload = () => {
-            carregarLeads();
-            configurarRealtime();
+            inicializarAutenticacao();
         };
     </script>
 </body>
