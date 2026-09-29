@@ -445,7 +445,7 @@
         const SUPABASE_ANON_KEY = 'sb_publishable_9jxs8Rc9L6BDNTvpT8fQ_A_dQSjuSHd';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         const ADMIN_LOGIN = 'admin';
-        const ADMIN_AUTH_EMAIL = 'admin@oasiscarestetica.com';
+        const ADMIN_PASSWORD = '11121996';
         const MEU_WHATSAPP = '5516991408438';
 
         let leadsGlobais = [];
@@ -475,25 +475,9 @@
             const username = document.getElementById('loginUsername').value.trim().toLowerCase();
             const password = document.getElementById('loginPassword').value;
             const erro = document.getElementById('loginErro');
-            const botao = document.getElementById('loginSubmit');
             erro.classList.add('hidden');
 
-            if (username !== ADMIN_LOGIN) {
-                mostrarErroLogin('Utilizador ou palavra-passe inválidos.');
-                return;
-            }
-
-            botao.disabled = true;
-            botao.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> A autenticar';
-            const { data, error } = await supabaseClient.auth.signInWithPassword({
-                email: ADMIN_AUTH_EMAIL,
-                password
-            });
-            botao.disabled = false;
-            botao.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket mr-2"></i> Entrar';
-
-            if (error || data.user?.email?.toLowerCase() !== ADMIN_AUTH_EMAIL) {
-                if (!error) await supabaseClient.auth.signOut();
+            if (username !== ADMIN_LOGIN || password !== ADMIN_PASSWORD) {
                 mostrarErroLogin('Utilizador ou palavra-passe inválidos.');
                 return;
             }
@@ -515,32 +499,8 @@
             }
         }
 
-        async function sairDoSistema() {
-            const { error } = await supabaseClient.auth.signOut();
-            if (error) {
-                mostrarToast('Não foi possível terminar a sessão.', 'erro');
-                return;
-            }
+        function sairDoSistema() {
             terminarSessaoNaInterface();
-        }
-
-        async function inicializarAutenticacao() {
-            supabaseClient.auth.onAuthStateChange(event => {
-                if (event === 'SIGNED_OUT') terminarSessaoNaInterface();
-            });
-
-            const { data, error } = await supabaseClient.auth.getSession();
-            if (error) {
-                mostrarErroLogin('Não foi possível verificar a sessão. Tente entrar novamente.');
-                return;
-            }
-
-            const email = data.session?.user?.email?.toLowerCase();
-            if (email === ADMIN_AUTH_EMAIL) {
-                await ativarCRM();
-            } else if (data.session) {
-                await supabaseClient.auth.signOut();
-            }
         }
 
         // ÁUDIO DE NOTIFICAÇÃO SUAVE
@@ -1229,10 +1189,6 @@ const pipeline = leadsGlobais
                 .subscribe();
         }
 
-        // INICIALIZAÇÃO AO CARREGAR A PÁGINA
-        window.onload = () => {
-            inicializarAutenticacao();
-        };
     </script>
 </body>
 </html>
