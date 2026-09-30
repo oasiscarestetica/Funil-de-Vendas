@@ -544,7 +544,6 @@
 
     <!-- CONTAINER DE NOTIFICAÇÕES TOAST -->
     <div id="toastContainer" class="fixed bottom-6 right-6 z-50 space-y-3 pointer-events-none"></div>
-    <audio id="cashSound" src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_12d46e36d8.mp3" preload="auto" class="hidden"></audio>
 
     <!-- SCRIPT DE LÓGICA DO SUPABASE & CRM -->
     <script>
@@ -562,6 +561,7 @@
         let termoBusca = '';
         let ordenacaoAtual = 'recente';
         let somHabilitado = true;
+        let audioContextAlerta = null;
         let canalRealtime = null;
         let crmAtivo = false;
 
@@ -638,20 +638,75 @@
             terminarSessaoNaInterface();
         }
 
-        function playCashSound() {
-            if (!somHabilitado) return;
-            const sound = document.getElementById('cashSound');
-            if (!sound) return;
-            try {
-                sound.currentTime = 0;
-                const playback = sound.play();
-                if (playback && typeof playback.catch === 'function') {
-                    playback.catch(error => console.log('Áudio bloqueado pelo browser:', error));
+        function prepararAudioAlerta() {
+            if (!somHabilitado) return null;
+            if (audioContextAlerta) {
+                try {
+                    if (audioContextAlerta.state === 'suspended') audioContextAlerta.resume().catch(() => {});
+                    return audioContextAlerta;
+                } catch {
+                    audioContextAlerta = null;
+                    return null;
                 }
-            } catch (error) {
-                console.log('Áudio bloqueado pelo browser:', error);
+            }
+
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextClass) return null;
+
+            try {
+                audioContextAlerta = new AudioContextClass();
+                if (audioContextAlerta.state === 'suspended') audioContextAlerta.resume().catch(() => {});
+                return audioContextAlerta;
+            } catch {
+                audioContextAlerta = null;
+                return null;
             }
         }
+
+        function playCashSound() {
+            if (!somHabilitado || !audioContextAlerta) return;
+            const audioContext = audioContextAlerta;
+
+            const reproduzir = () => {
+                if (audioContext.state !== 'running') return;
+                try {
+                    const inicio = audioContext.currentTime;
+                    [
+                        { frequencia: 988, atraso: 0, duracao: 0.12 },
+                        { frequencia: 1318.5, atraso: 0.09, duracao: 0.14 },
+                        { frequencia: 1760, atraso: 0.2, duracao: 0.24 }
+                    ].forEach(nota => {
+                        const oscilador = audioContext.createOscillator();
+                        const volume = audioContext.createGain();
+                        const comecaEm = inicio + nota.atraso;
+                        oscilador.type = 'triangle';
+                        oscilador.frequency.setValueAtTime(nota.frequencia, comecaEm);
+                        volume.gain.setValueAtTime(0.0001, comecaEm);
+                        volume.gain.exponentialRampToValueAtTime(0.16, comecaEm + 0.015);
+                        volume.gain.exponentialRampToValueAtTime(0.0001, comecaEm + nota.duracao);
+                        oscilador.connect(volume);
+                        volume.connect(audioContext.destination);
+                        oscilador.start(comecaEm);
+                        oscilador.stop(comecaEm + nota.duracao + 0.02);
+                    });
+                } catch {
+                    return;
+                }
+            };
+
+            try {
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume().then(reproduzir).catch(() => {});
+                } else {
+                    reproduzir();
+                }
+            } catch {
+                return;
+            }
+        }
+
+        window.addEventListener('pointerdown', prepararAudioAlerta, { once: true });
+        window.addEventListener('keydown', prepararAudioAlerta, { once: true });
 
         function toggleSound() {
             somHabilitado = !somHabilitado;
@@ -1268,6 +1323,7 @@ const pipeline = leads
 
         async function salvarNovoLead(e) {
             e.preventDefault();
+            prepararAudioAlerta();
             const valor = document.getElementById('novoValor').value;
             const novoLead = {
                 nome: document.getElementById('novoNome').value.trim(),
