@@ -128,6 +128,9 @@
         .kanban-nav-esq { left: -10px; }
         .kanban-nav-dir { right: -10px; }
         .kanban-nav.oculto { opacity: 0; pointer-events: none; }
+        /* Esconde a barra de rolagem horizontal do funil (a navegação é feita pelas setas) */
+        #kanbanBoard { scrollbar-width: none; -ms-overflow-style: none; }
+        #kanbanBoard::-webkit-scrollbar { display: none; width: 0; height: 0; }
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
         }
@@ -165,7 +168,7 @@
         <div class="p-6 border-b border-cardBorder flex items-center justify-between">
             <div>
                 <span class="text-brandAmber font-black text-xl tracking-tight block">OÁSIS CAR</span>
-                <span class="text-zinc-400 text-[10px] uppercase tracking-widest font-semibold">CRM Premium v2.5</span>
+                <span class="text-zinc-400 text-[10px] uppercase tracking-widest font-semibold">CRM Premium v2.6</span>
             </div>
             <button onclick="toggleSound()" id="soundToggleBtn" class="text-zinc-400 hover:text-brandAmber transition" title="Ativar/Desativar Som">
                 <i class="fa-solid fa-volume-high text-sm"></i>
@@ -342,7 +345,7 @@
                 </div>
                 <div class="relative flex-1 min-h-0 flex flex-col">
                     <button type="button" id="kanbanSetaEsq" onclick="rolarKanban(-1)" class="kanban-nav kanban-nav-esq" aria-label="Ver colunas anteriores" title="Colunas anteriores"><i class="fa-solid fa-chevron-left"></i></button>
-                    <div class="flex-1 min-h-0 flex gap-4 overflow-x-auto pb-4 custom-scrollbar scroll-smooth" id="kanbanBoard">
+                    <div class="flex-1 min-h-0 flex gap-4 overflow-x-auto pb-2 scroll-smooth" id="kanbanBoard">
                         <!-- Colunas Kanban geradas via JS -->
                     </div>
                     <button type="button" id="kanbanSetaDir" onclick="rolarKanban(1)" class="kanban-nav kanban-nav-dir" aria-label="Ver próximas colunas" title="Próximas colunas"><i class="fa-solid fa-chevron-right"></i></button>
@@ -599,6 +602,15 @@
             return leadsGlobais.filter(lead => lead && typeof lead === 'object' && !Array.isArray(lead));
         }
 
+        // Normaliza o telefone do lead para o formato do WhatsApp (com 55 do Brasil)
+        function numeroWhatsApp(lead) {
+            let digitos = String(lead?.telefone || lead?.whatsapp || '').replace(/\D/g, '');
+            if (!digitos) return '';
+            digitos = digitos.replace(/^0+/, '');
+            if (digitos.length === 10 || digitos.length === 11) digitos = '55' + digitos; // DDD + número
+            return digitos.length >= 12 ? digitos : '';
+        }
+
         function mostrarErroLogin(mensagem) {
             const erro = document.getElementById('loginErro');
             erro.textContent = mensagem;
@@ -769,6 +781,7 @@
                 perdidos: 'Leads Perdidos'
             };
             document.getElementById('tituloPagina').innerText = titulos[abaId] || 'CRM Oásis Car';
+            if (abaId === 'kanban' && typeof atualizarSetasKanban === 'function') requestAnimationFrame(atualizarSetasKanban);
         }
 
         // CARREGAR LEADS DO SUPABASE
@@ -887,7 +900,7 @@ const pipeline = leads
                 const dataFormatada = item.created_at ? new Date(item.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-';
                 const fone = item.telefone || item.whatsapp || '';
                 const msgZap = encodeURIComponent(`Olá ${item.nome}, tudo bem? Aqui é da Oásis Car. Recebemos seu interesse em ${item.servico || 'estética automotiva'} para seu ${item.veiculo || 'veículo'}. Como podemos ajudar?`);
-                const numeroZap = fone.replace(/\D/g, '');
+                const numeroZap = numeroWhatsApp(item);
                 const linkZap = numeroZap ? `https://wa.me/${numeroZap}?text=${msgZap}` : '#';
 
                 const badgeStatus = {
@@ -937,7 +950,7 @@ const pipeline = leads
 
             ultimos.forEach(item => {
                 const fone = item.telefone || item.whatsapp || '';
-                const numeroZap = fone.replace(/\D/g, '');
+                const numeroZap = numeroWhatsApp(item);
                 const linkZap = `https://wa.me/${numeroZap}?text=${encodeURIComponent(`Olá ${item.nome}, tudo bem? Aqui é da Oásis Car.`)}`;
                 container.innerHTML += `
                     <div class="flex items-center justify-between p-3.5 rounded-xl bg-zinc-900/60 border border-cardBorder hover:border-zinc-700 transition">
@@ -1002,7 +1015,7 @@ const pipeline = leads
 
                 const cardsHtml = leadsColuna.map(item => {
                     const id = escaparHtml(item.id);
-                    const numeroZap = String(item.telefone || item.whatsapp || '').replace(/\D/g, '');
+                    const numeroZap = numeroWhatsApp(item);
                     const linkZap = numeroZap ? `https://wa.me/${numeroZap}?text=${encodeURIComponent(`Olá ${item.nome || ''}, tudo bem? Aqui é da Oásis Car.`)}` : '';
                     const criado = item.created_at ? new Date(item.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '';
                     const ag = item.data_agendamento ? formatarAgendamento(item.data_agendamento) : null;
@@ -1088,6 +1101,8 @@ const pipeline = leads
             board.addEventListener('scroll', atualizarSetasKanban, { passive: true });
             window.addEventListener('resize', atualizarSetasKanban);
             new MutationObserver(() => requestAnimationFrame(atualizarSetasKanban)).observe(board, { childList: true });
+            // Recalcula sempre que o funil muda de tamanho (inclui quando a aba passa de escondida a visível)
+            if ('ResizeObserver' in window) new ResizeObserver(() => atualizarSetasKanban()).observe(board);
             // Recalcula ao abrir a aba do funil (antes estava escondida e sem largura)
             document.querySelector('[data-tab="kanban"]')?.addEventListener('click', () => requestAnimationFrame(atualizarSetasKanban));
             document.addEventListener('keydown', e => {
@@ -1244,7 +1259,7 @@ const pipeline = leads
                 const ag = formatarAgendamento(item.data_agendamento);
                 const temAgendamento = !!item.data_agendamento;
                 const fone = item.telefone || item.whatsapp || '';
-                const numeroZap = fone.replace(/\D/g, '');
+                const numeroZap = numeroWhatsApp(item);
                 const msgZap = encodeURIComponent(
                     `Olá ${item.nome || ''}, tudo bem? Aqui é da Oásis Car. Confirmando seu agendamento${temAgendamento ? ` para ${ag.data} às ${ag.hora}` : ''}.`
                 );
