@@ -109,6 +109,19 @@
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #505862; }
         @keyframes slideIn { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         .toast-animate { animation: slideIn 0.3s ease-out forwards; }
+        /* KANBAN PREMIUM */
+        .kanban-col { width: 300px; flex-shrink: 0; display: flex; flex-direction: column; max-height: 100%; border-radius: 1.25rem; background: linear-gradient(180deg, rgba(24, 27, 32, 0.72), rgba(13, 15, 19, 0.72)); border: 1px solid rgba(207, 215, 225, 0.08); transition: border-color 180ms ease, background 180ms ease; }
+        .kanban-col.drag-over { border-color: rgba(145, 177, 207, 0.55); background: linear-gradient(180deg, rgba(34, 40, 48, 0.85), rgba(16, 19, 24, 0.85)); }
+        .kanban-col-head { position: relative; padding: 1rem 1rem 0.85rem; border-bottom: 1px solid rgba(207, 215, 225, 0.07); }
+        .kanban-col-head::before { content: ''; position: absolute; left: 1rem; right: 1rem; top: 0; height: 2px; border-radius: 0 0 4px 4px; background: var(--col-cor); opacity: 0.85; }
+        .kanban-card { position: relative; cursor: pointer; border-radius: 1rem; padding: 0.95rem; background: linear-gradient(145deg, rgba(30, 33, 39, 0.95), rgba(18, 20, 24, 0.95)); border: 1px solid rgba(207, 215, 225, 0.08); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25); transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease; }
+        .kanban-card::before { content: ''; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; border-radius: 0 3px 3px 0; background: var(--col-cor); }
+        .kanban-card:hover { transform: translateY(-2px); border-color: rgba(207, 215, 225, 0.2); box-shadow: 0 12px 28px rgba(0, 0, 0, 0.38); }
+        .kanban-card.dragging { opacity: 0.45; transform: rotate(1.5deg); }
+        .kanban-card:focus-visible { outline: 2px solid rgba(145, 177, 207, 0.7); outline-offset: 2px; }
+        .kanban-mini-btn { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 0.6rem; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(207, 215, 225, 0.08); color: #a1a1aa; font-size: 11px; }
+        .kanban-mini-btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.1); color: #fff; }
+        .kanban-mini-btn:disabled { opacity: 0.3; cursor: not-allowed; }
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
         }
@@ -317,10 +330,11 @@
 
             <!-- ABA 3: FUNIL DE VENDAS KANBAN -->
             <div id="tab-kanban" class="hidden h-full flex flex-col">
-                <div class="flex items-center justify-between mb-4">
-                    <p class="text-zinc-400 text-xs">Arraste ou altere o status dos leads diretamente no fluxo operacional.</p>
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+                    <p class="text-zinc-400 text-xs"><i class="fa-solid fa-hand-pointer mr-1.5 text-zinc-500"></i>Clique num card para abrir o lead. Arraste entre colunas ou use as setas para mudar de etapa.</p>
+                    <div id="kanbanResumo" class="flex flex-wrap items-center gap-2"></div>
                 </div>
-                <div class="flex-1 grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-4 overflow-x-auto pb-4 custom-scrollbar" id="kanbanBoard">
+                <div class="flex-1 min-h-0 flex gap-4 overflow-x-auto pb-4 custom-scrollbar" id="kanbanBoard">
                     <!-- Colunas Kanban geradas via JS -->
                 </div>
             </div>
@@ -933,67 +947,184 @@ const pipeline = leads
         }
 
         // RENDERIZAR KANBAN (FUNIL DE VENDAS)
+        const COLUNAS_KANBAN = [
+            { id: 'NOVO', titulo: 'Novos Leads', cor: '#60a5fa', icone: 'fa-inbox' },
+            { id: 'EM_ATENDIMENTO', titulo: 'Em Atendimento', cor: '#fbbf24', icone: 'fa-headset' },
+            { id: 'ORCAMENTO', titulo: 'Orçamento', cor: '#c084fc', icone: 'fa-file-invoice-dollar' },
+            { id: 'NEGOCIACAO', titulo: 'Negociação', cor: '#fb923c', icone: 'fa-handshake' },
+            { id: 'AGENDADO', titulo: 'Agendados', cor: '#818cf8', icone: 'fa-calendar-check' },
+            { id: 'GANHO', titulo: 'Ganhos', cor: '#34d399', icone: 'fa-trophy' },
+            { id: 'PERDIDO', titulo: 'Perdidos', cor: '#f87171', icone: 'fa-ban' }
+        ];
+
+        function escaparHtml(valor) {
+            return String(valor ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        function formatarMoeda(valor) {
+            return (Number(valor) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        function iniciaisNome(nome) {
+            const partes = String(nome || '').trim().split(/\s+/).filter(Boolean);
+            if (partes.length === 0) return '?';
+            return ((partes[0][0] || '') + (partes.length > 1 ? partes[partes.length - 1][0] : '')).toUpperCase();
+        }
+
         function renderizarKanban() {
             const board = document.getElementById('kanbanBoard');
-            board.innerHTML = '';
+            if (!board) return;
             const leads = obterLeadsSeguros();
 
-            const colunas = [
-                { id: 'NOVO', titulo: 'Novos Leads', cor: 'border-l-blue-500' },
-                { id: 'EM_ATENDIMENTO', titulo: 'Em Atendimento', cor: 'border-l-amber-500' },
-                { id: 'ORCAMENTO', titulo: 'Orçamento', cor: 'border-l-purple-500' },
-                { id: 'NEGOCIACAO', titulo: 'Negociação', cor: 'border-l-orange-500' },
-                { id: 'AGENDADO', titulo: 'Agendados', cor: 'border-l-indigo-500' },
-                { id: 'GANHO', titulo: 'Ganhos', cor: 'border-l-emerald-500' },
-                { id: 'PERDIDO', titulo: 'Perdidos', cor: 'border-l-red-500' }
-            ];
+            const resumo = document.getElementById('kanbanResumo');
+            if (resumo) {
+                const ativos = leads.filter(l => !['GANHO', 'PERDIDO'].includes(String(l.status || 'NOVO').toUpperCase()));
+                const ganhos = leads.filter(l => String(l.status || '').toUpperCase() === 'GANHO');
+                resumo.innerHTML = `
+                    <span class="px-3 py-1.5 rounded-xl bg-zinc-900/80 border border-cardBorder text-[11px] text-zinc-400">Em aberto: <b class="text-white">${ativos.length}</b> · <b class="text-white">${formatarMoeda(ativos.reduce((a, l) => a + (Number(l.valor) || 0), 0))}</b></span>
+                    <span class="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-emerald-300">Fechado: <b>${formatarMoeda(ganhos.reduce((a, l) => a + (Number(l.valor) || 0), 0))}</b></span>
+                `;
+            }
 
-            colunas.forEach(col => {
+            board.innerHTML = COLUNAS_KANBAN.map((col, indiceCol) => {
                 const leadsColuna = leads.filter(l => String(l.status || 'NOVO').toUpperCase() === col.id);
+                const totalColuna = leadsColuna.reduce((acc, l) => acc + (Number(l.valor) || 0), 0);
 
-                let cardsHtml = '';
-                leadsColuna.forEach(item => {
-                    const fone = item.telefone || item.whatsapp || '';
-                    const numeroZap = String(fone).replace(/\D/g, '');
-                    const linkZap = numeroZap ? `https://wa.me/${numeroZap}?text=${encodeURIComponent(`Olá ${item.nome}, tudo bem? Aqui é da Oásis Car.`)}` : '#';
+                const cardsHtml = leadsColuna.map(item => {
+                    const id = escaparHtml(item.id);
+                    const numeroZap = String(item.telefone || item.whatsapp || '').replace(/\D/g, '');
+                    const linkZap = numeroZap ? `https://wa.me/${numeroZap}?text=${encodeURIComponent(`Olá ${item.nome || ''}, tudo bem? Aqui é da Oásis Car.`)}` : '';
+                    const criado = item.created_at ? new Date(item.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '';
+                    const ag = item.data_agendamento ? formatarAgendamento(item.data_agendamento) : null;
 
-                    cardsHtml += `
-                        <div class="bg-zinc-900/90 border border-cardBorder p-4 rounded-2xl hover:border-zinc-700 transition shadow-md space-y-3">
-                            <div class="flex justify-between items-start">
-                                <p class="font-bold text-sm text-white">${item.nome || 'Cliente'}</p>
-                                <button onclick="abrirModal(${item.id})" class="text-zinc-500 hover:text-brandAmber"><i class="fa-solid fa-pen text-xs"></i></button>
+                    return `
+                        <div class="kanban-card" style="--col-cor:${col.cor}" draggable="true" tabindex="0" data-lead-id="${id}" title="Abrir lead">
+                            <div class="flex items-start gap-3">
+                                <div class="w-9 h-9 rounded-xl flex items-center justify-center text-[11px] font-black shrink-0" style="background:${col.cor}1f;color:${col.cor};border:1px solid ${col.cor}40">${escaparHtml(iniciaisNome(item.nome))}</div>
+                                <div class="min-w-0 flex-1">
+                                    <p class="font-bold text-sm text-white leading-tight break-words">${escaparHtml(item.nome || 'Cliente sem nome')}</p>
+                                    <p class="text-[11px] text-zinc-400 mt-1 leading-snug break-words"><i class="fa-solid fa-car-side mr-1 text-zinc-600"></i>${escaparHtml(item.veiculo || 'Veículo não informado')}</p>
+                                </div>
                             </div>
-                            <p class="text-xs text-zinc-400">${item.veiculo || 'Veículo'} • <span class="text-brandAmber">${item.servico || 'Serviço'}</span></p>
-                            <p class="text-xs font-semibold text-emerald-400">${item.valor ? Number(item.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00'}</p>
-                            <div class="flex items-center justify-between pt-2 border-t border-zinc-800 text-xs">
-                                <a href="${linkZap}" ${numeroZap ? 'target="_blank"' : 'onclick="return false;"'} class="${numeroZap ? 'text-emerald-400 hover:underline' : 'text-zinc-600 cursor-not-allowed'} font-bold flex items-center"><i class="fa-brands fa-whatsapp mr-1"></i> ${numeroZap ? 'WhatsApp' : 'Sem telefone'}</a>
-                                <select onchange="atualizarStatusLead(${item.id}, this.value)" class="bg-zinc-950 border border-cardBorder text-[10px] text-zinc-300 rounded px-1.5 py-1 focus:outline-none">
-                                    <option value="NOVO" ${item.status === 'NOVO' ? 'selected' : ''}>Novo</option>
-                                    <option value="EM_ATENDIMENTO" ${item.status === 'EM_ATENDIMENTO' ? 'selected' : ''}>Atendimento</option>
-                                    <option value="ORCAMENTO" ${item.status === 'ORCAMENTO' ? 'selected' : ''}>Orçamento</option>
-                                    <option value="NEGOCIACAO" ${item.status === 'NEGOCIACAO' ? 'selected' : ''}>Negociação</option>
-                                    <option value="AGENDADO" ${item.status === 'AGENDADO' ? 'selected' : ''}>Agendado</option>
-                                    <option value="GANHO" ${item.status === 'GANHO' ? 'selected' : ''}>Ganho</option>
-                                    <option value="PERDIDO" ${item.status === 'PERDIDO' ? 'selected' : ''}>Perdido</option>
-                                </select>
+                            <div class="flex flex-wrap items-center gap-1.5 mt-3">
+                                <span class="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[10px] font-semibold text-zinc-300">${escaparHtml(item.servico || 'Serviço a definir')}</span>
+                                ${ag ? `<span class="px-2 py-0.5 rounded-md bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-semibold text-indigo-300"><i class="fa-regular fa-clock mr-1"></i>${ag.destaque === ag.data ? ag.data.slice(0, 5) : ag.destaque} ${ag.hora}</span>` : ''}
+                            </div>
+                            <div class="flex items-end justify-between mt-3">
+                                <div>
+                                    <p class="text-[10px] uppercase tracking-wider text-zinc-500">Valor</p>
+                                    <p class="text-sm font-extrabold ${Number(item.valor) ? 'text-emerald-400' : 'text-zinc-500'}">${formatarMoeda(item.valor)}</p>
+                                </div>
+                                ${criado ? `<span class="text-[10px] text-zinc-500"><i class="fa-regular fa-calendar mr-1"></i>${criado}</span>` : ''}
+                            </div>
+                            <div class="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-white/5">
+                                <div class="flex items-center gap-1.5">
+                                    <button type="button" class="kanban-mini-btn" data-acao="mover" data-direcao="-1" ${indiceCol === 0 ? 'disabled' : ''} title="Etapa anterior" aria-label="Mover para etapa anterior"><i class="fa-solid fa-chevron-left"></i></button>
+                                    <button type="button" class="kanban-mini-btn" data-acao="mover" data-direcao="1" ${indiceCol === COLUNAS_KANBAN.length - 1 ? 'disabled' : ''} title="Próxima etapa" aria-label="Mover para próxima etapa"><i class="fa-solid fa-chevron-right"></i></button>
+                                </div>
+                                <div class="flex items-center gap-1.5">
+                                    ${linkZap
+                                        ? `<a href="${linkZap}" target="_blank" rel="noopener" class="kanban-mini-btn !text-emerald-400 hover:!bg-emerald-500 hover:!text-black" title="WhatsApp" aria-label="Abrir WhatsApp"><i class="fa-brands fa-whatsapp text-sm"></i></a>`
+                                        : `<span class="kanban-mini-btn opacity-30 cursor-not-allowed" title="Lead sem telefone"><i class="fa-brands fa-whatsapp text-sm"></i></span>`}
+                                    <button type="button" class="kanban-mini-btn" data-acao="abrir" title="Abrir / editar lead" aria-label="Abrir lead"><i class="fa-solid fa-pen"></i></button>
+                                </div>
                             </div>
                         </div>
                     `;
-                });
+                }).join('');
 
-                board.innerHTML += `
-                    <div class="w-72 flex-shrink-0 glass-panel rounded-3xl p-4 flex flex-col max-h-full">
-                        <div class="flex justify-between items-center mb-3 pb-2 border-b border-cardBorder">
-                            <h3 class="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center"><span class="w-2 h-2 rounded-full bg-brandAmber mr-2"></span> ${col.titulo}</h3>
-                            <span class="bg-zinc-900 text-zinc-400 text-xs px-2 py-0.5 rounded-full font-bold">${leadsColuna.length}</span>
+                return `
+                    <section class="kanban-col" style="--col-cor:${col.cor}" data-coluna="${col.id}">
+                        <div class="kanban-col-head">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-[11px] font-bold uppercase tracking-[0.12em] text-zinc-200 flex items-center gap-2">
+                                    <span class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:${col.cor}1a;color:${col.cor}"><i class="fa-solid ${col.icone} text-[11px]"></i></span>
+                                    ${col.titulo}
+                                </h3>
+                                <span class="text-[11px] font-bold px-2 py-0.5 rounded-full" style="background:${col.cor}1a;color:${col.cor}">${leadsColuna.length}</span>
+                            </div>
+                            <p class="text-[11px] text-zinc-500 mt-2">${formatarMoeda(totalColuna)}</p>
                         </div>
-                        <div class="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-1">
-                            ${cardsHtml || '<p class="text-center text-xs text-zinc-600 py-8">Nenhum lead</p>'}
+                        <div class="flex-1 min-h-[120px] overflow-y-auto space-y-3 p-3 custom-scrollbar">
+                            ${cardsHtml || `<div class="h-full min-h-[100px] flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-white/10 text-zinc-600 text-[11px] py-6"><i class="fa-regular fa-folder-open text-lg mb-2"></i>Solte um lead aqui</div>`}
                         </div>
-                    </div>
+                    </section>
                 `;
-            });
+            }).join('');
         }
+
+        // INTERAÇÕES DO KANBAN (clique, setas e arrastar-e-soltar)
+        (function configurarInteracoesKanban() {
+            const board = document.getElementById('kanbanBoard');
+            if (!board) return;
+            let idArrastado = null;
+
+            board.addEventListener('click', e => {
+                const card = e.target.closest('.kanban-card');
+                if (!card) return;
+                if (e.target.closest('a')) return; // WhatsApp
+                const id = card.dataset.leadId;
+                const botao = e.target.closest('button[data-acao]');
+                if (botao && botao.dataset.acao === 'mover') {
+                    e.stopPropagation();
+                    const lead = obterLeadsSeguros().find(l => String(l.id) === String(id));
+                    const atual = COLUNAS_KANBAN.findIndex(c => c.id === String(lead?.status || 'NOVO').toUpperCase());
+                    const destino = COLUNAS_KANBAN[atual + Number(botao.dataset.direcao)];
+                    if (destino) atualizarStatusLead(id, destino.id);
+                    return;
+                }
+                abrirModal(id);
+            });
+
+            board.addEventListener('keydown', e => {
+                const card = e.target.closest('.kanban-card');
+                if (card && e.target === card && (e.key === 'Enter' || e.key === ' ')) {
+                    e.preventDefault();
+                    abrirModal(card.dataset.leadId);
+                }
+            });
+
+            board.addEventListener('dragstart', e => {
+                const card = e.target.closest('.kanban-card');
+                if (!card) return;
+                idArrastado = card.dataset.leadId;
+                card.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                try { e.dataTransfer.setData('text/plain', idArrastado); } catch {}
+            });
+
+            board.addEventListener('dragend', e => {
+                e.target.closest('.kanban-card')?.classList.remove('dragging');
+                board.querySelectorAll('.kanban-col.drag-over').forEach(c => c.classList.remove('drag-over'));
+                idArrastado = null;
+            });
+
+            board.addEventListener('dragover', e => {
+                const col = e.target.closest('.kanban-col');
+                if (!col || !idArrastado) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                board.querySelectorAll('.kanban-col.drag-over').forEach(c => c !== col && c.classList.remove('drag-over'));
+                col.classList.add('drag-over');
+            });
+
+            board.addEventListener('dragleave', e => {
+                const col = e.target.closest('.kanban-col');
+                if (col && !col.contains(e.relatedTarget)) col.classList.remove('drag-over');
+            });
+
+            board.addEventListener('drop', e => {
+                const col = e.target.closest('.kanban-col');
+                if (!col || !idArrastado) return;
+                e.preventDefault();
+                col.classList.remove('drag-over');
+                const lead = obterLeadsSeguros().find(l => String(l.id) === String(idArrastado));
+                if (lead && String(lead.status || 'NOVO').toUpperCase() !== col.dataset.coluna) {
+                    atualizarStatusLead(idArrastado, col.dataset.coluna);
+                }
+                idArrastado = null;
+            });
+        })();
 
         // FORMATAR DATA/HORA DO AGENDAMENTO SEM ALTERAR O HORÁRIO SALVO
         function formatarAgendamento(valor) {
@@ -1163,16 +1294,28 @@ const pipeline = leads
 
         // ALTERAR STATUS RÁPIDO (KANBAN)
         async function atualizarStatusLead(id, novoStatus) {
+            const indice = leadsGlobais.findIndex(l => String(l.id) === String(id));
+            const statusAnterior = indice !== -1 ? leadsGlobais[indice].status : null;
+            if (indice !== -1) {
+                leadsGlobais[indice] = { ...leadsGlobais[indice], status: novoStatus };
+                atualizarInterfaceCompleta();
+            }
+
             const { error } = await supabaseClient
                 .from('pistas')
                 .update({ status: novoStatus })
                 .eq('id', id);
 
             if (error) {
+                console.error('Erro ao atualizar status:', error);
+                if (indice !== -1) {
+                    leadsGlobais[indice] = { ...leadsGlobais[indice], status: statusAnterior };
+                    atualizarInterfaceCompleta();
+                }
                 mostrarToast('Erro ao atualizar status.', 'erro');
             } else {
-                mostrarToast('Status atualizado com sucesso!', 'sucesso');
-                carregarLeads();
+                const coluna = COLUNAS_KANBAN.find(c => c.id === novoStatus);
+                mostrarToast(`Lead movido para ${coluna ? coluna.titulo : novoStatus}.`, 'sucesso');
             }
         }
 
@@ -1400,9 +1543,14 @@ const pipeline = leads
         }
 
         // MODAL DE EDIÇÃO
-      function abrirModal(id) {
-            const lead = leadsGlobais.find(l => l.id === id);
-            if (!lead) return;
+        function abrirModal(id) {
+            const lead = obterLeadsSeguros().find(l => String(l.id) === String(id));
+            if (!lead) {
+                console.warn('Lead não encontrado:', id);
+                return;
+            }
+            const titulo = document.getElementById('modalTitulo');
+            if (titulo) titulo.textContent = lead.nome || 'Detalhes do Lead';
 
             document.getElementById('editId').value = lead.id;
             document.getElementById('editNome').value = lead.nome || '';
