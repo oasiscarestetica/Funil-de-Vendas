@@ -1125,7 +1125,7 @@ const pipeline = leadsGlobais
         }
 
         // AGENDAR CLIENTE CONVERTIDO
-        function abrirModalAgendamento() {
+        window.abrirModalAgendamento = function() {
             document.getElementById('formAgendamento').reset();
             const clientesGanhos = leadsGlobais.filter(lead => String(lead.status || '').toUpperCase() === 'GANHO');
             const select = document.getElementById('agendamentoLead');
@@ -1144,7 +1144,7 @@ const pipeline = leadsGlobais
             document.getElementById('agendamentoErro').classList.add('hidden');
             atualizarCamposAgendamento();
             document.getElementById('modalAgendamento').classList.remove('hidden');
-        }
+        };
 
         function atualizarCamposAgendamento() {
             const select = document.getElementById('agendamentoLead');
@@ -1161,9 +1161,9 @@ const pipeline = leadsGlobais
             observacoes.value = lead?.observacoes || '';
         }
 
-        function fecharModalAgendamento() {
+        window.fecharModalAgendamento = function() {
             document.getElementById('modalAgendamento').classList.add('hidden');
-        }
+        };
 
         async function salvarAgendamento(e) {
             e.preventDefault();
