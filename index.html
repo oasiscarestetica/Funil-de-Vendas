@@ -500,7 +500,7 @@
             </div>
             <form id="formAgendamento" onsubmit="salvarAgendamento(event)" class="space-y-4">
                 <div>
-                    <label for="agendamentoLead" class="block text-xs font-semibold text-zinc-400 mb-1.5">Cliente ganho</label>
+                    <label for="agendamentoLead" class="block text-xs font-semibold text-zinc-400 mb-1.5">Cliente / Lead</label>
                     <select id="agendamentoLead" onchange="atualizarCamposAgendamento()" required class="w-full bg-zinc-900 border border-cardBorder rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-brandAmber text-zinc-200">
                         <option value="">Selecione um cliente...</option>
                         <option value="novo">Cadastrar novo cliente</option>
@@ -1216,19 +1216,44 @@ const pipeline = leads
             if (!form || !select) return;
 
             form.reset();
-            const clientesGanhos = obterLeadsSeguros().filter(lead => String(lead.status || '').toUpperCase() === 'GANHO');
+            // Lista TODOS os leads do CRM, agrupados por status (clientes ganhos primeiro)
+            const todosLeads = obterLeadsSeguros();
+            const grupos = [
+                { status: 'GANHO', titulo: 'Clientes ganhos' },
+                { status: 'AGENDADO', titulo: 'Já agendados' },
+                { status: 'NEGOCIACAO', titulo: 'Em negociação' },
+                { status: 'ORCAMENTO', titulo: 'Orçamento' },
+                { status: 'EM_ATENDIMENTO', titulo: 'Em atendimento' },
+                { status: 'NOVO', titulo: 'Novos leads' },
+                { status: 'PERDIDO', titulo: 'Perdidos' }
+            ];
+            const statusConhecidos = grupos.map(g => g.status);
             select.innerHTML = '<option value="">Selecione um cliente...</option>';
-            clientesGanhos.forEach(lead => {
-                const option = document.createElement('option');
-                option.value = lead.id;
-                option.textContent = `${lead.nome || 'Cliente'} - ${lead.veiculo || 'Veículo'}`;
-                select.appendChild(option);
-            });
+
+            const adicionarGrupo = (titulo, leads) => {
+                if (leads.length === 0) return;
+                const optgroup = document.createElement('optgroup');
+                optgroup.label = `${titulo} (${leads.length})`;
+                leads
+                    .slice()
+                    .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR'))
+                    .forEach(lead => {
+                        const option = document.createElement('option');
+                        option.value = lead.id;
+                        option.textContent = `${lead.nome || 'Cliente sem nome'} - ${lead.veiculo || 'Veículo não informado'}`;
+                        optgroup.appendChild(option);
+                    });
+                select.appendChild(optgroup);
+            };
+
+            grupos.forEach(g => adicionarGrupo(g.titulo, todosLeads.filter(l => String(l.status || 'NOVO').toUpperCase() === g.status)));
+            adicionarGrupo('Outros', todosLeads.filter(l => !statusConhecidos.includes(String(l.status || 'NOVO').toUpperCase())));
+
             const novoClienteOption = document.createElement('option');
             novoClienteOption.value = 'novo';
-            novoClienteOption.textContent = 'Cadastrar novo cliente';
+            novoClienteOption.textContent = '+ Cadastrar novo cliente';
             select.appendChild(novoClienteOption);
-            select.value = clientesGanhos.length === 0 ? 'novo' : '';
+            select.value = todosLeads.length === 0 ? 'novo' : '';
             const erro = document.getElementById('agendamentoErro');
             if (erro) erro.classList.add('hidden');
             const hoje = new Date();
@@ -1302,9 +1327,13 @@ const pipeline = leads
                     leadGuardado = data;
                     leadsGlobais.unshift(leadGuardado);
                 } else {
+                    const leadAtual = obterLeadsSeguros().find(item => String(item.id) === String(id));
+                    const statusAtual = String(leadAtual?.status || '').toUpperCase();
+                    // Clientes GANHO mantêm o status; os restantes passam a AGENDADO para aparecerem na Agenda
+                    const dadosUpdate = statusAtual === 'GANHO' ? dadosAgendamento : { ...dadosAgendamento, status: 'AGENDADO' };
                     const { data, error } = await supabaseClient
                         .from('pistas')
-                        .update(dadosAgendamento)
+                        .update(dadosUpdate)
                         .eq('id', id)
                         .select()
                         .single();
