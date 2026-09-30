@@ -1197,10 +1197,17 @@ const pipeline = leads
 
         // AGENDAR CLIENTE CONVERTIDO
         window.abrirModalAgendamento = function() {
-            const form = document.getElementById('formAgendamento');
             const modal = document.getElementById('modalAgendamento');
+            if (modal) {
+                modal.classList.remove('hidden');
+            } else {
+                console.error('Modal de agendamento não encontrado no DOM.');
+                return;
+            }
+
+            const form = document.getElementById('formAgendamento');
             const select = document.getElementById('agendamentoLead');
-            if (!form || !modal || !select) return;
+            if (!form || !select) return;
 
             form.reset();
             const clientesGanhos = obterLeadsSeguros().filter(lead => String(lead.status || '').toUpperCase() === 'GANHO');
@@ -1219,7 +1226,6 @@ const pipeline = leads
             const erro = document.getElementById('agendamentoErro');
             if (erro) erro.classList.add('hidden');
             atualizarCamposAgendamento();
-            modal.classList.remove('hidden');
         };
 
         function atualizarCamposAgendamento() {
