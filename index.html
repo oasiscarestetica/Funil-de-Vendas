@@ -544,7 +544,6 @@
 
     <!-- CONTAINER DE NOTIFICAÇÕES TOAST -->
     <div id="toastContainer" class="fixed bottom-6 right-6 z-50 space-y-3 pointer-events-none"></div>
-    <audio id="cashSound" src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_12d46e36d8.mp3" preload="auto" class="hidden"></audio>
 
     <!-- SCRIPT DE LÓGICA DO SUPABASE & CRM -->
     <script>
@@ -562,6 +561,7 @@
         let termoBusca = '';
         let ordenacaoAtual = 'recente';
         let somHabilitado = true;
+        let audioContextAlerta = null;
         let canalRealtime = null;
         let crmAtivo = false;
 
@@ -638,14 +638,66 @@
             terminarSessaoNaInterface();
         }
 
-        function playCashSound() {
-            if (!somHabilitado) return;
-            const sound = document.getElementById('cashSound');
-            if (sound) {
-                sound.currentTime = 0;
-                sound.play().catch(err => console.log('Áudio bloqueado pelo browser:', err));
+        function prepararAudioAlerta() {
+            if (audioContextAlerta) {
+                if (audioContextAlerta.state === 'suspended') {
+                    audioContextAlerta.resume().catch(error => console.warn('Não foi possível ativar o áudio.', error));
+                }
+                return audioContextAlerta;
+            }
+
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextClass) return null;
+
+            try {
+                audioContextAlerta = new AudioContextClass();
+                if (audioContextAlerta.state === 'suspended') {
+                    audioContextAlerta.resume().catch(error => console.warn('Não foi possível ativar o áudio.', error));
+                }
+                return audioContextAlerta;
+            } catch (error) {
+                console.warn('Áudio de notificação indisponível neste navegador.', error);
+                return null;
             }
         }
+
+        async function playCashSound() {
+            if (!somHabilitado) return;
+
+            try {
+                const audioContext = audioContextAlerta || prepararAudioAlerta();
+                if (!audioContext) return;
+                if (audioContext.state === 'suspended') await audioContext.resume();
+                if (audioContext.state !== 'running') return;
+
+                const inicio = audioContext.currentTime;
+                const notas = [
+                    { frequencia: 988, atraso: 0, duracao: 0.12 },
+                    { frequencia: 1318.5, atraso: 0.09, duracao: 0.14 },
+                    { frequencia: 1760, atraso: 0.2, duracao: 0.24 }
+                ];
+
+                notas.forEach(nota => {
+                    const oscilador = audioContext.createOscillator();
+                    const volume = audioContext.createGain();
+                    const comecaEm = inicio + nota.atraso;
+                    oscilador.type = 'triangle';
+                    oscilador.frequency.setValueAtTime(nota.frequencia, comecaEm);
+                    volume.gain.setValueAtTime(0.0001, comecaEm);
+                    volume.gain.exponentialRampToValueAtTime(0.16, comecaEm + 0.015);
+                    volume.gain.exponentialRampToValueAtTime(0.0001, comecaEm + nota.duracao);
+                    oscilador.connect(volume);
+                    volume.connect(audioContext.destination);
+                    oscilador.start(comecaEm);
+                    oscilador.stop(comecaEm + nota.duracao + 0.02);
+                });
+            } catch (error) {
+                console.warn('Não foi possível reproduzir o alerta sonoro.', error);
+            }
+        }
+
+        window.addEventListener('click', prepararAudioAlerta, { once: true });
+        window.addEventListener('keydown', prepararAudioAlerta, { once: true });
 
         function toggleSound() {
             somHabilitado = !somHabilitado;
@@ -1136,9 +1188,13 @@ const pipeline = leads
 
         // AGENDAR CLIENTE CONVERTIDO
         window.abrirModalAgendamento = function() {
-            document.getElementById('formAgendamento').reset();
-            const clientesGanhos = obterLeadsSeguros().filter(lead => String(lead.status || '').toUpperCase() === 'GANHO');
+            const form = document.getElementById('formAgendamento');
+            const modal = document.getElementById('modalAgendamento');
             const select = document.getElementById('agendamentoLead');
+            if (!form || !modal || !select) return;
+
+            form.reset();
+            const clientesGanhos = obterLeadsSeguros().filter(lead => String(lead.status || '').toUpperCase() === 'GANHO');
             select.innerHTML = '<option value="">Selecione um cliente...</option>';
             clientesGanhos.forEach(lead => {
                 const option = document.createElement('option');
@@ -1151,28 +1207,31 @@ const pipeline = leads
             novoClienteOption.textContent = 'Cadastrar novo cliente';
             select.appendChild(novoClienteOption);
             select.value = clientesGanhos.length === 0 ? 'novo' : '';
-            document.getElementById('agendamentoErro').classList.add('hidden');
+            const erro = document.getElementById('agendamentoErro');
+            if (erro) erro.classList.add('hidden');
             atualizarCamposAgendamento();
-            document.getElementById('modalAgendamento').classList.remove('hidden');
+            modal.classList.remove('hidden');
         };
 
         function atualizarCamposAgendamento() {
             const select = document.getElementById('agendamentoLead');
-            const isNovoCliente = select.value === 'novo';
             const camposNovoCliente = document.getElementById('agendamentoNovoCliente');
             const nome = document.getElementById('agendamentoNome');
             const servico = document.getElementById('agendamentoServico');
             const observacoes = document.getElementById('agendamentoObservacoes');
+            if (!select || !camposNovoCliente || !nome || !servico || !observacoes) return;
+
+            const isNovoCliente = select.value === 'novo';
 
             camposNovoCliente.classList.toggle('hidden', !isNovoCliente);
             nome.required = isNovoCliente;
-            const lead = leadsGlobais.find(item => String(item.id) === String(select.value));
+            const lead = obterLeadsSeguros().find(item => String(item.id) === String(select.value));
             servico.value = lead?.servico || '';
             observacoes.value = lead?.observacoes || '';
         }
 
         window.fecharModalAgendamento = function() {
-            document.getElementById('modalAgendamento').classList.add('hidden');
+            document.getElementById('modalAgendamento')?.classList.add('hidden');
         };
 
         async function salvarAgendamento(e) {
@@ -1255,6 +1314,7 @@ const pipeline = leads
 
         async function salvarNovoLead(e) {
             e.preventDefault();
+            prepararAudioAlerta();
             const valor = document.getElementById('novoValor').value;
             const novoLead = {
                 nome: document.getElementById('novoNome').value.trim(),
@@ -1280,13 +1340,7 @@ const pipeline = leads
             leadsGlobais.unshift(data);
             atualizarInterfaceCompleta();
             fecharModalNovoLead();
-            if (somHabilitado) {
-                const sound = document.getElementById('cashSound');
-                if (sound) {
-                    sound.currentTime = 0;
-                    sound.play().catch(err => console.log('Áudio bloqueado pelo browser:', err));
-                }
-            }
+            playCashSound();
             mostrarToast('Lead criado com sucesso!', 'sucesso');
         }
 
