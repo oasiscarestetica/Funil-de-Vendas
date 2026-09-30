@@ -13,11 +13,11 @@
             theme: {
                 extend: {
                     colors: {
-                        darkBg: '#050505',
-                        cardDark: '#0b0b0c',
-                        cardBorder: '#242321',
-                        brandAmber: '#c9a66b',
-                        brandAmberHover: '#ddbd87',
+                        darkBg: '#0a0b0e',
+                        cardDark: '#111317',
+                        cardBorder: '#292d34',
+                        brandAmber: '#c9cdd3',
+                        brandAmberHover: '#edf0f4',
                     }
                 }
             }
@@ -26,71 +26,87 @@
     <style>
         :root {
             color-scheme: dark;
-            --surface-base: #050505;
-            --surface-raised: rgba(14, 14, 15, 0.78);
-            --surface-inset: rgba(8, 8, 9, 0.84);
-            --border-subtle: rgba(255, 255, 255, 0.075);
-            --accent-gold: #c9a66b;
-            --accent-glow: rgba(201, 166, 107, 0.13);
+            --surface-base: #0a0b0e;
+            --surface-raised: rgba(20, 22, 26, 0.76);
+            --surface-inset: rgba(11, 13, 16, 0.86);
+            --border-subtle: rgba(207, 215, 225, 0.11);
+            --platinum: #c9cdd3;
+            --platinum-bright: #edf0f4;
+            --electric-glow: rgba(80, 137, 194, 0.14);
+            --amber-glow: rgba(190, 148, 85, 0.1);
         }
         body {
-            background: radial-gradient(ellipse at 74% -18%, rgba(116, 83, 36, 0.12), transparent 38%),
-                        radial-gradient(ellipse at -12% 62%, rgba(72, 59, 38, 0.07), transparent 34%),
-                        var(--surface-base);
-            color: #f4f4f5;
+            background: radial-gradient(ellipse at 76% -18%, rgba(91, 111, 133, 0.15), transparent 38%),
+                        radial-gradient(ellipse at -12% 68%, rgba(46, 64, 81, 0.12), transparent 34%),
+                        linear-gradient(135deg, #0a0b0e 0%, #0d0f13 48%, #090a0d 100%);
+            color: #eef0f3;
             font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             color-scheme: dark;
             letter-spacing: 0.005em;
         }
-        ::selection { background: rgba(201, 166, 107, 0.28); color: #fff; }
+        ::selection { background: rgba(139, 174, 205, 0.28); color: #fff; }
         .glass-panel {
-            background: linear-gradient(145deg, rgba(18, 18, 19, 0.82), rgba(9, 9, 10, 0.78));
-            backdrop-filter: blur(18px);
-            -webkit-backdrop-filter: blur(18px);
-            border: 1px solid var(--border-subtle);
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 18px 48px rgba(0, 0, 0, 0.16);
-            transition: border-color 220ms ease, box-shadow 220ms ease, background-color 220ms ease, transform 220ms ease;
+            position: relative;
+            isolation: isolate;
+            background: linear-gradient(145deg, rgba(27, 30, 35, 0.78), rgba(14, 16, 20, 0.84)) padding-box,
+                        linear-gradient(145deg, rgba(224, 231, 239, 0.25), rgba(145, 157, 171, 0.08) 38%, rgba(80, 91, 105, 0.12) 72%, rgba(220, 227, 235, 0.16)) border-box;
+            backdrop-filter: blur(22px) saturate(125%);
+            -webkit-backdrop-filter: blur(22px) saturate(125%);
+            border: 1px solid transparent;
+            box-shadow: 0 2px 3px rgba(255, 255, 255, 0.025) inset,
+                        0 1px 0 rgba(255, 255, 255, 0.025),
+                        0 12px 24px rgba(0, 0, 0, 0.28),
+                        0 28px 64px rgba(0, 0, 0, 0.22);
+            transition: border-color 240ms ease, box-shadow 240ms ease, background 240ms ease, transform 240ms ease;
         }
         .glass-panel:not(header):hover {
-            border-color: rgba(201, 166, 107, 0.18);
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045), 0 20px 52px rgba(0, 0, 0, 0.24);
+            transform: translateY(-2px);
+            background: linear-gradient(145deg, rgba(31, 34, 40, 0.84), rgba(15, 17, 21, 0.9)) padding-box,
+                        linear-gradient(145deg, rgba(232, 237, 244, 0.34), rgba(143, 169, 192, 0.16) 48%, rgba(201, 205, 211, 0.2)) border-box;
+            box-shadow: 0 2px 4px rgba(255, 255, 255, 0.035) inset,
+                        0 1px 0 rgba(255, 255, 255, 0.035),
+                        0 18px 34px rgba(0, 0, 0, 0.36),
+                        0 36px 78px rgba(0, 0, 0, 0.28),
+                        0 0 28px rgba(119, 150, 179, 0.045);
         }
-        aside#sidebar { background: rgba(7, 7, 8, 0.92); border-color: var(--border-subtle); }
+        aside#sidebar { background: rgba(10, 12, 15, 0.94); border-color: var(--border-subtle); box-shadow: 12px 0 36px rgba(0, 0, 0, 0.22); }
         main { background-color: transparent !important; }
-        header.glass-panel { background: rgba(8, 8, 9, 0.78); border-color: var(--border-subtle); box-shadow: 0 12px 36px rgba(0, 0, 0, 0.16); }
+        header.glass-panel { background: rgba(13, 15, 19, 0.84); border-color: var(--border-subtle); box-shadow: 0 12px 36px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.035); }
+        .text-brandAmber { color: var(--platinum) !important; }
         .bg-brandAmber {
-            background: linear-gradient(135deg, #d5b77f 0%, #bd9655 52%, #a98246 100%) !important;
-            box-shadow: 0 8px 24px rgba(166, 125, 59, 0.16), inset 0 1px 0 rgba(255, 245, 219, 0.22);
+            background: linear-gradient(135deg, #edf0f4 0%, #c9cdd3 48%, #969da7 100%) !important;
+            color: #101216 !important;
+            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.24), 0 0 20px rgba(190, 202, 216, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.74);
             transition: transform 200ms ease, box-shadow 200ms ease, filter 200ms ease;
         }
         .bg-brandAmber:hover {
-            background: linear-gradient(135deg, #e4cb98 0%, #cba76a 54%, #b18d53 100%) !important;
-            box-shadow: 0 10px 30px rgba(166, 125, 59, 0.24), inset 0 1px 0 rgba(255, 248, 227, 0.28);
-            filter: saturate(1.08);
+            background: linear-gradient(135deg, #fff 0%, #dfe3e9 48%, #adb5c0 100%) !important;
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3), 0 0 26px rgba(190, 202, 216, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.88);
+            filter: brightness(1.04);
         }
+        .nav-btn:not(.bg-brandAmber):hover { background-color: rgba(178, 190, 204, 0.075) !important; }
+        .nav-btn.bg-brandAmber { color: #111318 !important; border-color: rgba(255, 255, 255, 0.36); }
         button, a, input, select, textarea { transition-duration: 200ms; }
         button:not(:disabled) { cursor: pointer; }
         button:not(.nav-btn):not(:disabled):hover { transform: translateY(-1px); }
-        .nav-btn { border: 1px solid transparent; }
-        .nav-btn.bg-brandAmber { color: #17120a !important; border-color: rgba(255, 236, 196, 0.18); }
         input, select, textarea {
             border-radius: 0.75rem;
-            background-color: rgba(8, 8, 9, 0.8) !important;
-            border-color: rgba(255, 255, 255, 0.09) !important;
+            background-color: rgba(9, 11, 14, 0.84) !important;
+            border-color: rgba(198, 207, 218, 0.12) !important;
             transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
         }
         input:focus, select:focus, textarea:focus {
-            border-color: rgba(201, 166, 107, 0.62) !important;
-            box-shadow: 0 0 0 3px rgba(201, 166, 107, 0.09);
+            border-color: rgba(145, 177, 207, 0.58) !important;
+            box-shadow: 0 0 0 3px rgba(87, 136, 180, 0.12), 0 0 20px rgba(87, 136, 180, 0.06);
         }
-        table thead { background: rgba(255, 255, 255, 0.018) !important; }
+        table thead { background: rgba(209, 218, 229, 0.025) !important; }
         tbody tr { transition: background-color 180ms ease; }
-        tbody tr:hover { background-color: rgba(201, 166, 107, 0.045) !important; }
-        #loginScreen { background: radial-gradient(ellipse at 50% 38%, rgba(116, 83, 36, 0.13), transparent 42%), #050505 !important; }
-        #loginScreen > div { border-radius: 1.25rem; background: rgba(13, 13, 14, 0.82); backdrop-filter: blur(22px); border-color: var(--border-subtle); box-shadow: 0 32px 100px rgba(0, 0, 0, 0.62), inset 0 1px 0 rgba(255, 255, 255, 0.045); }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #09090b; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #27272a; border-radius: 3px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+        tbody tr:hover { background-color: rgba(174, 190, 207, 0.045) !important; }
+        #loginScreen { background: radial-gradient(ellipse at 50% 38%, rgba(91, 111, 133, 0.18), transparent 42%), #0a0b0e !important; }
+        #loginScreen > div { border-radius: 1.25rem; background: linear-gradient(145deg, rgba(27, 30, 35, 0.9), rgba(12, 14, 17, 0.92)); backdrop-filter: blur(24px); border-color: var(--border-subtle); box-shadow: 0 32px 100px rgba(0, 0, 0, 0.68), 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 0 50px rgba(100, 132, 164, 0.05); }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #0a0b0e; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #343941; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #505862; }
         @keyframes slideIn { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         .toast-animate { animation: slideIn 0.3s ease-out forwards; }
         @media (prefers-reduced-motion: reduce) {
